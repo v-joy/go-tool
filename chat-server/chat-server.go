@@ -10,11 +10,13 @@ import (
     "container/list"
 )
 
+const SYSTEM_NAME = "SYSTEM"
+
 var clients *list.List //global variable, so that it can be used in all functions
 
 type client struct{
-    conn net.Conn
-    name string
+    Conn net.Conn
+    Name string
 }
 
 func main(){
@@ -24,6 +26,7 @@ func main(){
     flag.Parse()
     clients = list.New()
     ln,err := net.Listen("tcp",*host+":"+*port)
+    log.Println("listenning:"+*host+":"+*port);
     e(err) 
     for {
         conn, err := ln.Accept();
@@ -33,18 +36,19 @@ func main(){
 }
 
 func response(conn net.Conn){
-
+    //mark_todo : check version
+    
     //init variable
     var c client;
     var content string
     data := make([]byte,1024);
 
     //save the client into list
-    c.conn = conn
-    c.name = getName(conn)
+    c.Conn = conn
+    c.Name = getName(conn)
     elem := clients.PushBack(c)
-    msg := "new conn from "+conn.RemoteAddr().String()+" name:"+c.name
-
+    msg := "new conn from "+conn.RemoteAddr().String()+" name:"+c.Name
+    broadCast(msg,SYSTEM_NAME);
     defer func(){
         clients.Remove(elem)
         conn.Close()
@@ -55,25 +59,32 @@ func response(conn net.Conn){
     for {
         data = make([]byte,1024);//mark review
         n,err := conn.Read(data);
+        d := data[:n]
+        content = strings.TrimRight(string(d),"\n\r")
         switch err {
             case nil:
-                broadCast(data);
+                broadCast(content,c.Name);
             case io.EOF:
-                broadCast(data);
+                broadCast(content,c.Name);
                 break forBreak;
             default:
                 break forBreak;
         }
-        d := data[:n]
-        content = strings.TrimRight(string(d)," \n\r")
         if content == "bye" {
            break forBreak 
         }
     }
-    broadCast(c.name" from "+conn.RemoteAddr().String()+" left");
+    broadCast(c.Name+" from "+conn.RemoteAddr().String()+" left",SYSTEM_NAME);
 }
-func broadCast(msg []byte) {
-    log.Println(string(msg))
+func broadCast(msg,name string) {
+    msgFmt := name+":"+msg+"\r\n";
+    log.Print(msgFmt);
+    for e := clients.Front();e!=nil;e=e.Next(){
+        c := e.Value.(client)
+        if c.Name != name {
+            c.Conn.Write([]byte(msgFmt));
+        }
+    }
     return 
 }
 
@@ -83,21 +94,28 @@ func getName(conn net.Conn) (name string){
     e(err)
     n,err := conn.Read(data);
     e(err)
-    name = string(data[0:n])
+    name = string(data[0:n-2])
     for ;existsName(name); {
         _,err = conn.Write([]byte{'n','a','m','e',' ','e','x','i','s','t','s','!','y','o','u','r',' ','n','a','m','e',':'});
         e(err)
         n,err = conn.Read(data);
         e(err)
-        name = string(data[0:n])
+        name = string(data[0:n-2])
     }
 
     return name
 }
 
 func existsName(name string) (r bool) {
-    //mark_todo 
-    //return true
+    for e := clients.Front();e!=nil;e=e.Next(){
+        c := e.Value.(client)
+        if c.Name == name {
+            return true
+        }
+    }
+    if name == SYSTEM_NAME {
+        return true
+    }
     return false
 }
 
