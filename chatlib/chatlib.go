@@ -2,13 +2,20 @@ package chatlib
 
 import (
     "fmt"
+    "os"
+    "net"
 )
 
-func Send(){
-
+type Msg struct{
+   action string
+   data string
 }
 
-func Recive(){
+func (this *Msg) Send(){
+    fmt.Println("chatlib.Send");
+}
+
+func (this *Msg) Recive(){
 
 }
 

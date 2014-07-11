@@ -8,9 +8,14 @@ import (
     "os"
     "strings"
     "container/list"
+    "go-tool/chatlib"
 )
 
-const SYSTEM_NAME = "SYSTEM"
+const (
+    SYSTEM_NAME = "SYSTEM"
+    SERVER_IP = ""
+    SERVER_PORT = "9002"
+)
 
 var clients *list.List //global variable, so that it can be used in all functions
 
@@ -20,9 +25,10 @@ type client struct{
 }
 
 func main(){
+    chatlib.Send()
     //mark_todo : get default configuration from config file
-    port := flag.String("p","9002","the port that you want to listen");
-    host := flag.String("h","","the host/ip that you want to listen");
+    port := flag.String("p",SERVER_PORT,"the port that you want to listen");
+    host := flag.String("h",SERVER_IP,"the host/ip that you want to listen");
     flag.Parse()
     clients = list.New()
     ln,err := net.Listen("tcp",*host+":"+*port)

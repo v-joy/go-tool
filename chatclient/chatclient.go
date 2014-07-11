@@ -9,18 +9,34 @@ import (
     "strings"
 )
 
+const (
+    SERVER_IP = "127.0.0.1"
+    SERVER_PORT = "9002"
+)
+
 func main(){
-    port := flag.String("p","9002","the port that you want to listen");
-    host := flag.String("h","","the host/ip that you want to listen");
+    port := flag.String("p",SERVER_PORT,"the port that you want to connect");
+    host := flag.String("h",SERVER_IP,"the host/ip that you want to connect");
     flag.Parse()
-    ln,err := net.Listen("tcp",*host+":"+*port)
-    e(err) // error
-    for {
-        conn, err := ln.Accept();
-        e(err) //error
-        go response(conn);
-    }
+    conn, err := net.Dial("tcp", *host+":"+*port)
+    e(err) 
+    register(&conn)
+    go handleListen(&conn)
+    go handelWtire(&conn)
 }
+
+func register(*net.Conn conn){
+    
+}
+
+func handleListen(*net.Conn conn){
+    
+}
+
+func handleWrite(*net.Conn conn){
+    
+}
+
 
 func response(conn net.Conn){
     data := make([]byte,1024);
