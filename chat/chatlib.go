@@ -1,10 +1,11 @@
 package chat
 
 import (
-    "fmt"
-//    "os"
-//   "net"
+	"fmt"
+	//    "os"
+	//   "net"
 )
+
 /*
 type Msg struct{
    action string
@@ -20,8 +21,6 @@ func (this *Msg) Recive(){
 }
 */
 
-func  Send(action,msg string){
-    fmt.Println("chatlib.Send");
+func Send(action, msg string) {
+	fmt.Println("chatlib.Send")
 }
-
-
