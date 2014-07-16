@@ -8,7 +8,7 @@ import (
     "os"
     "strings"
     "container/list"
-    "go-tool/chatlib"
+    . "go-tool/chat"
 )
 
 const (
@@ -24,8 +24,13 @@ type client struct{
     Name string
 }
 
+type server struct{
+    Port string
+    Host string
+}
+
 func main(){
-    chatlib.Send()
+    Send("action","message")
     //mark_todo : get default configuration from config file
     port := flag.String("p",SERVER_PORT,"the port that you want to listen");
     host := flag.String("h",SERVER_IP,"the host/ip that you want to listen");
