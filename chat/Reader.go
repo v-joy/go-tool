@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 )
@@ -30,21 +31,20 @@ func (this *Reader) ReadMsg() (data interface{}, err error) {
 	err = binary.Read(this, binary.BigEndian, &bodyLen16)
 	if err != nil {
 		log.Println("error:", err)
-		panic("read header error")
+		return nil, errors.New("read header error")
 	}
-    bodyLen := int(bodyLen16) 
+	bodyLen := int(bodyLen16)
 	//read body
-	body := make([]byte,bodyLen)
-
-    _,err = io.ReadFull(this,body)
+	body := make([]byte, bodyLen)
+	_, err = io.ReadFull(this, body)
 	if err != nil {
 		log.Println("error:", err)
-		panic("read body error")
+		return nil, errors.New("read body error")
 	}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Println("error:", err)
-		panic("convert body error")
+		return nil, errors.New("convert body error")
 	}
 	return data, nil
 }
