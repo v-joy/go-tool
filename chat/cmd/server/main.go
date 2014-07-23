@@ -11,17 +11,14 @@ import (
 	"strings"
 )
 
-const (
-	SYSTEM_NAME = "SYSTEM"
-	SERVER_IP   = ""
-	SERVER_PORT = "9002"
-)
 
 var clients *list.List //global variable, so that it can be used in all functions
 
-type client struct {
+type Client struct {
 	Conn net.Conn
-	Name string
+	Wt *Writer
+    Rd *Reader
+    Name string
 }
 
 type server struct {
@@ -30,7 +27,6 @@ type server struct {
 }
 
 func main() {
-	Send("action", "message")
 	//mark_todo : get default configuration from config file
 	port := flag.String("p", SERVER_PORT, "the port that you want to listen")
 	host := flag.String("h", SERVER_IP, "the host/ip that you want to listen")
@@ -42,34 +38,43 @@ func main() {
 	for {
 		conn, err := ln.Accept()
 		e(err) //error
-		go response(conn)
+		clt := getClient(conn)
+        ele := clients.PushBack(clt)
+	    defer func() {
+		    clients.Remove(ele)
+            clt.distroy()
+	    }()
+        go clt.response()
 	}
 }
 
-func response(conn net.Conn) {
+func getClient(conn net.Conn)(clt *Client){
+    wt := NewWriter(conn)
+    rd := NewReader(conn)
+    clt = &Client{
+        Wt:wt,
+        Rd:rd,
+        Conn:conn,
+        Name:CLIENT_INIT_NAME,
+    }
+    l("new conn from " + conn.RemoteAddr().String())
+    return clt
+}
+
+func (this *Client)distroy(){
+    //mark todo 
+}
+
+
+func (c *Client)response() {
 	//mark_todo : check version
-
-	//init variable
-	var c client
-	var content string
-	data := make([]byte, 1024)
-
-	//save the client into list
-	c.Conn = conn
-	c.Name = getName(conn)
-	elem := clients.PushBack(c)
-	msg := "new conn from " + conn.RemoteAddr().String() + " name:" + c.Name
-	broadCast(msg, SYSTEM_NAME)
-	defer func() {
-		clients.Remove(elem)
-		conn.Close()
-	}()
+	//broadCast(msg, SYSTEM_NAME)
 
 	//listen and broadcast
+/*
 forBreak:
 	for {
-		data = make([]byte, 1024) //mark review
-		n, err := conn.Read(data)
+		msg, err := c.Rd.ReadMsg()
 		d := data[:n]
 		content = strings.TrimRight(string(d), "\n\r")
 		switch err {
@@ -86,18 +91,20 @@ forBreak:
 		}
 	}
 	broadCast(c.Name+" from "+conn.RemoteAddr().String()+" left", SYSTEM_NAME)
+*/
 }
 func broadCast(msg, name string) {
 	msgFmt := name + ":" + msg + "\r\n"
 	log.Print(msgFmt)
 	for e := clients.Front(); e != nil; e = e.Next() {
-		c := e.Value.(client)
+		c := e.Value.(Client)
 		if c.Name != name {
 			c.Conn.Write([]byte(msgFmt))
 		}
 	}
 	return
 }
+
 
 func getName(conn net.Conn) (name string) {
 	data := make([]byte, 1024)
@@ -119,7 +126,7 @@ func getName(conn net.Conn) (name string) {
 
 func existsName(name string) (r bool) {
 	for e := clients.Front(); e != nil; e = e.Next() {
-		c := e.Value.(client)
+		c := e.Value.(Client)
 		if c.Name == name {
 			return true
 		}
@@ -130,9 +137,14 @@ func existsName(name string) (r bool) {
 	return false
 }
 
+func l(mes string){
+    log.Println(msg)
+}
+
 func e(err error) {
 	if err != nil {
 		log.Fatal("error:" + err.Error())
 		os.Exit(-1)
 	}
 }
+

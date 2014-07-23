@@ -3,6 +3,7 @@ package chat
 import (
 	"bufio"
 	"encoding/json"
+	"encoding/binary"
 	"io"
 	"log"
 )
@@ -23,15 +24,20 @@ func NewWriterSize(rd io.Writer, size int) *Writer {
 	return &cr
 }
 
-//witch type should be returned
 func (this *Writer) WriteMsg(data interface{}) (n int, err error) {
 	body, err := json.Marshal(data)
 	if err != nil {
 		log.Println("error:", err)
 		return 0, err
 	}
-	n = len(body)
+	var bodyLen uint16
+	bodyLen = uint16(len(body))
 	//write head
-	//write body
-	return n, nil
+	err = binary.Write(this, binary.BigEndian, bodyLen)
+	if err != nil {
+		log.Println("binary.Write failed:", err)
+	}
+	//write body  mark: need handle error
+	this.Write(body)
+	return n + 2, nil
 }

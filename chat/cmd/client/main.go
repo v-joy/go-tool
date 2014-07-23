@@ -4,70 +4,96 @@ import (
     "fmt"
     "net"
     "flag"
-    "io"
     "os"
-    "strings"
+    "log"
+	. "go-tool/chat"
 )
 
-const (
-    SERVER_IP = "127.0.0.1"
-    SERVER_PORT = "9002"
-)
+type Client struct {
+	Conn net.Conn
+	Wt *Writer
+    Rd *Reader
+    Lwt *Writer
+    Lrd *Reader
+    Name string
+}
+
+func NewClient(host,port string)( clt *Client,err error) {
+    conn, err := net.Dial("tcp", host+":"+port)
+    e(err) 
+    wt := NewWriter(conn)
+    rd := NewReader(conn)
+    lwt := NewWriter(os.Stdout)
+    lrd := NewReader(os.Stdin)
+    clt = &Client{
+        Wt:wt,
+        Rd:rd,
+        Lwt:lwt,
+        Lrd:lrd,
+        Name:CLIENT_INIT_NAME,
+        Conn:conn,
+    }
+    err = clt.Register()
+    return clt,err
+}
+
+
+func (this *Client)Register() (err error){
+    if this.Name != CLIENT_INIT_NAME {
+        return nil
+    }
+    log.Println("register begin")
+    this.Lwt.WriteString("please input your name");
+    for{
+        name,_,_:= this.Lrd.ReadLine()
+        data := map[string]string{
+            "name":string(name),
+        }
+        msg := Msg{
+            Action:"register",
+            Data:data,
+        }
+        this.Wt.WriteMsg(msg)
+        ret,_ := this.Rd.ReadMsg()
+
+        switch ret.Data["status"]{
+            case "200":
+                this.Name = string(name)
+                return nil
+            default:
+                continue
+        }
+    }
+    return nil
+}
+
+
+
 
 func main(){
     port := flag.String("p",SERVER_PORT,"the port that you want to connect");
     host := flag.String("h",SERVER_IP,"the host/ip that you want to connect");
     flag.Parse()
-    conn, err := net.Dial("tcp", *host+":"+*port)
-    e(err) 
-    register(&conn)
-    go handleListen(&conn)
-    go handelWtire(&conn)
+    clt,err := NewClient(*host,*port)
+    e(err)
+    go clt.handleListen()
+    go clt.handleWrite()
 }
 
-func register(*net.Conn conn){
+
+func (this *Client)handleListen(){
     
 }
 
-func handleListen(*net.Conn conn){
+func (this *Client)handleWrite(){
     
 }
 
-func handleWrite(*net.Conn conn){
+func (this *Client)output(){
     
 }
 
 
-func response(conn net.Conn){
-    data := make([]byte,1024);
-    var content string
-    fmt.Println("new conn!")
-    forBreak:
-    for {
-        data = make([]byte,1024);//mark review
-        n,err := conn.Read(data);
-        switch err {
-            case nil:
-                fmt.Printf("recived:%s",string(data))
-                _,_ = conn.Write(data);
-            case io.EOF:
-                fmt.Printf("recived:%s --end",string(data))
-                _,_ = conn.Write(data);
-                break forBreak;
-            default:
-                fmt.Println("rev failed:"+err.Error())
-                break forBreak;
-        }
-        d := data[:n]
-        content = strings.TrimRight(string(d)," \n\r")
-        if content == "bye" {
-           break forBreak 
-        }
-    }
-    //_,_ = conn.Write("bye")
-    fmt.Println("conn closed")
-    conn.Close();
-}
 func e(err error){
     if err != nil {
         fmt.Println("error:"+err.Error());
