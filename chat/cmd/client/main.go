@@ -61,8 +61,8 @@ func (this *Client) Register() (err error) {
 	if this.Name != CLIENT_INIT_NAME {
 		return nil
 	}
+	this.output("please input your name")
 	for {
-		this.output("please input your name")
 		name, _, _ := this.Lrd.ReadLine()
 		msg := map[string]interface{}{
 			"action": "register",
@@ -76,22 +76,21 @@ func (this *Client) Register() (err error) {
 		e(err)
 		action, data, err := MsgInfo(ret)
 		e(err)
-		switch action { //mark
+		switch action {
 		case "ack":
 			if data["status"].(float64) == 200 {
 				this.Name = string(name)
 				this.output("set name success :" + string(name) + "! now , let's chat!")
 				return nil
-			} else {
-				continue
 			}
 		case "chat":
 			// this is never supposed to happen
-			continue
+			this.output("this is never supposed to happen")
 		default:
 			this.output("action type error:" + action)
 			os.Exit(1)
 		}
+		this.output(" name exists: please input your name again ")
 	}
 	return nil
 }

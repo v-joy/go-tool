@@ -7,7 +7,8 @@ import (
 	//"io"
 	"log"
 	"net"
-	"os"
+	"sync"
+	//"os"
 	//"strings"
 )
 
@@ -33,17 +34,25 @@ func main() {
 	ln, err := net.Listen("tcp", *host+":"+*port)
 	l("listenning:" + *host + ":" + *port)
 	e(err)
+	wg := new(sync.WaitGroup)
 	for {
 		conn, err := ln.Accept()
+		wg.Add(1)
 		e(err) //error
 		clt := getClient(conn)
 		ele := clients.PushBack(clt)
-		defer func() {
-			clients.Remove(ele)
-			clt.distroy()
+		go func() {
+			defer func() {
+				name := clt.Name
+				clients.Remove(ele)
+				clt.distroy()
+				broadCast(name+" has left the chat room!", SYSTEM_NAME)
+				wg.Done()
+			}()
+			clt.response()
 		}()
-		go clt.response()
 	}
+	wg.Wait()
 }
 
 func getClient(conn net.Conn) (clt *Client) {
@@ -60,6 +69,7 @@ func getClient(conn net.Conn) (clt *Client) {
 
 func (this *Client) distroy() {
 	//mark todo
+	l(this.Name + " is dead")
 }
 
 func (c *Client) response() {
@@ -67,12 +77,15 @@ func (c *Client) response() {
 	reply := map[string]interface{}{}
 	for {
 		msg, err := c.Rd.ReadMsg()
-		e(err)
+		if err != nil {
+			log.Println("error:" + err.Error())
+			return
+		}
 		action, data, err := MsgInfo(msg)
 		if err != nil {
 			//reply error and close the connection
 			l("error:" + err.Error())
-			break
+			return
 		}
 		reply = map[string]interface{}{
 			"action": "ack",
@@ -99,14 +112,14 @@ func (c *Client) response() {
 				l("name " + name + " exists")
 			} else {
 				c.Name = name
-				broadCast("new user :"+c.Name+" from "+c.Conn.RemoteAddr().String(), SYSTEM_NAME)
+				broadCast("--- new member is comming: "+c.Name+" from "+c.Conn.RemoteAddr().String()+" --- ", name)
 				l("new user :" + c.Name + " from " + c.Conn.RemoteAddr().String())
 			}
 		default:
 			//show error
 			l("invalid action:" + action)
 			//and close the connection
-			break
+			return
 		}
 		err = c.Wt.WriteMsg(reply)
 		e(err)
@@ -149,6 +162,6 @@ func l(msg string) {
 func e(err error) {
 	if err != nil {
 		log.Fatal("error:" + err.Error())
-		os.Exit(-1)
+		//os.Exit(-1)
 	}
 }
